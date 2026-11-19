@@ -1,7 +1,9 @@
 // main.ts — THE WORLD, 19 November 2026 (make.fun news-image-20261119)
 //
 // Validates the front-page image entry.png next to this script and copies
-// it into the output directory given as the first argument.
+// it into an output directory: the first argument when given, /output
+// otherwise (the grader runs `node /bot/main.ts` with no arguments and
+// mounts an empty writable directory at /output).
 //
 // Usage: node main.ts ./out
 //
@@ -11,7 +13,8 @@
 // is copied.
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const MAX_BYTES = 1024 * 1024;
@@ -24,15 +27,15 @@ function fail(message: string): never {
 }
 
 function main(): void {
-  const outDir = process.argv[2];
-  if (!outDir) {
-    fail("missing output directory argument — usage: node main.ts <out-dir>");
-  }
+  // No argument: the grader's sandbox run passes none, so default to
+  // /output; a directory given on the command line still wins.
+  const outDir = process.argv[2] ?? "/output";
 
-  // entry.png lives next to this script. Prefer the script's own folder
-  // when it is known, and fall back to the working directory otherwise.
-  const scriptDir =
-    typeof __dirname !== "undefined" ? __dirname : process.cwd();
+  // entry.png lives next to this script. Resolve it from the script's own
+  // location: import.meta.url works under Node's TypeScript stripping,
+  // where __dirname does not exist, and the working directory is not
+  // reliable (the grader runs from elsewhere).
+  const scriptDir = dirname(fileURLToPath(import.meta.url));
   const source = join(scriptDir, "entry.png");
   if (!existsSync(source)) {
     fail(`entry.png not found next to main.ts (${source})`);
